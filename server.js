@@ -55,9 +55,9 @@ server.get('/places', (req, res) => {
       const allResultPromises = json.results.map(result => {
         return fetch( URI_PLACE_DETAILS + result.place_id + '&key=' + GMAPS_KEY)
           .then(response => response.json())
-          .then(json => {
-            return json;
-          })
+          // .then(json => {
+          //   return json;
+          // })
           .catch(error => console.log(error));
       })
       Promise.all(allResultPromises)
