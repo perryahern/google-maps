@@ -10,48 +10,66 @@ const GMAPS_KEY = config.googleMaps.apiKey;
 const STATUS_SUCCESS = 200;
 const STATUS_USER_ERROR = 422;
 
+const URI_PLACE_SEARCH = 'https://maps.googleapis.com/maps/api/place/textsearch/json?query=';
+const URI_PLACE_DETAILS = 'https://maps.googleapis.com/maps/api/place/details/json?placeid=';
+
 server.use(bodyParser.json());
 
-// server.post('/place', (req, res) => {
-//   if (!req.body.search) {
-//     res.status(STATUS_USER_ERROR);
-//     res.json({ error: 'No search query provided'});
-//     return;
-//   }
-//   console.log('\n\n\n----------------------------------------------------------------\n\n\n');
-//   let data = fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${req.body.search}&key=${GMAPS_KEY}`)
-//     .then(res => res.json())
-//     .then(json => json)
-//     .catch(error => console.log(error));
-//   res.status(STATUS_SUCCESS);
-//   console.log(data);
-//   res.json(data);
-// });
-
-function getData(req, res) {
-  fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${req.body.search}&key=${GMAPS_KEY}`)
-    .then(response => response.json())
-    .then(json => {
-      fetch(`https://maps.googleapis.com/maps/api/place/details/json?placeid=${json.results[0].place_id}&key=${GMAPS_KEY}`)
-      .then(response => response.json())
-      .then(json => {
-        res.status(STATUS_SUCCESS)
-        res.json(json)
-      })
-    })
-    .catch(error => console.log(error));
-}
-
-server.post('/place', (req, res) => {
+server.get('/places', (req, res) => {
   // check if search term was provided
-  if (!req.body.search) {
+  if (!req.query.search) {
     res.status(STATUS_USER_ERROR);
     res.json({ error: 'No search term provided'});
     return;
   }
 
-  // search term was provided, get the data from Google
-  getData(req, res);
+  // search term was provided, get the data from Google Place Search
+  fetch( URI_PLACE_SEARCH + req.query.search + '&key=' + GMAPS_KEY)
+    .then(response => response.json())
+    .then(json => {
+      console.log('number of results: ', json.results.length);
+      // get the detailed info on each from Google Place Details
+      const allResultPromises = json.results.map(result => {
+        fetch( URI_PLACE_DETAILS + result.place_id + '&key=' + GMAPS_KEY)
+          .then(response => response.json())
+          .then(json => {
+            return json;
+          })
+          .catch(error => console.log(error));
+      })
+      console.log(allResultPromises);
+      Promise.all(allResultPromises).then(response => res.status(200).json(response));
+      // res.status(STATUS_SUCCESS);
+      // res.json(Promise.all(allResults));
+    })
+    .catch(error => console.log(error));
+});
+
+server.get('/places', (req, res) => {
+  // check if search term was provided
+  if (!req.query.search) {
+    res.status(STATUS_USER_ERROR);
+    res.json({ error: 'No search term provided'});
+    return;
+  }
+
+  // search term was provided, get the data from Google Place Search
+  fetch( URI_PLACE_SEARCH + req.query.search + '&key=' + GMAPS_KEY)
+    .then(response => response.json())
+    .then(json => {
+      console.log('number of results: ', json.results.length);
+      // get the detailed info on each from Google Place Details
+      json.results.map(result => {
+        fetch( URI_PLACE_DETAILS + result.place_id + '&key=' + GMAPS_KEY )
+          .then(response => response.json())
+          .then(json => {
+            res.status(STATUS_SUCCESS)
+            res.json(json)
+          })
+          .catch(error => console.log(error));
+      })
+    })
+    .catch(error => console.log(error));
 });
 
 server.listen(PORT, () => {
