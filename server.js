@@ -15,7 +15,7 @@ const URI_PLACE_DETAILS = 'https://maps.googleapis.com/maps/api/place/details/js
 
 server.use(bodyParser.json());
 
-server.get('/places', (req, res) => {
+server.get('/place', (req, res) => {
   // check if search term was provided
   if (!req.query.search) {
     res.status(STATUS_USER_ERROR);
@@ -23,24 +23,18 @@ server.get('/places', (req, res) => {
     return;
   }
 
-  // search term was provided, get the data from Google Place Search
+  // search term was provided, get the data from Google
   fetch( URI_PLACE_SEARCH + req.query.search + '&key=' + GMAPS_KEY)
     .then(response => response.json())
     .then(json => {
       console.log('number of results: ', json.results.length);
-      // get the detailed info on each from Google Place Details
-      const allResultPromises = json.results.map(result => {
-        fetch( URI_PLACE_DETAILS + result.place_id + '&key=' + GMAPS_KEY)
-          .then(response => response.json())
-          .then(json => {
-            return json;
-          })
-          .catch(error => console.log(error));
-      })
-      console.log(allResultPromises);
-      Promise.all(allResultPromises).then(response => res.status(200).json(response));
-      // res.status(STATUS_SUCCESS);
-      // res.json(Promise.all(allResults));
+      fetch( URI_PLACE_DETAILS + json.results[0].place_id + '&key=' + GMAPS_KEY )
+        .then(response => response.json())
+        .then(json => {
+          res.status(STATUS_SUCCESS)
+          res.json(json)
+        })
+        .catch(error => console.log(error));
     })
     .catch(error => console.log(error));
 });
@@ -53,21 +47,24 @@ server.get('/places', (req, res) => {
     return;
   }
 
-  // search term was provided, get the data from Google Place Search
+  // search term was provided, get the data from Google Place Search for all 20 results
   fetch( URI_PLACE_SEARCH + req.query.search + '&key=' + GMAPS_KEY)
     .then(response => response.json())
     .then(json => {
-      console.log('number of results: ', json.results.length);
       // get the detailed info on each from Google Place Details
-      json.results.map(result => {
-        fetch( URI_PLACE_DETAILS + result.place_id + '&key=' + GMAPS_KEY )
+      const allResultPromises = json.results.map(result => {
+        return fetch( URI_PLACE_DETAILS + result.place_id + '&key=' + GMAPS_KEY)
           .then(response => response.json())
           .then(json => {
-            res.status(STATUS_SUCCESS)
-            res.json(json)
+            return json;
           })
           .catch(error => console.log(error));
       })
+      Promise.all(allResultPromises)
+        .then(response => {
+          res.status(STATUS_SUCCESS)
+          res.json(response)
+        });
     })
     .catch(error => console.log(error));
 });
